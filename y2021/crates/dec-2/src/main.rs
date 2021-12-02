@@ -10,12 +10,6 @@ enum Direction {
     Forward(i32),
 }
 
-#[derive(Debug)]
-struct Location {
-    height: i32,
-    distance: i32,
-}
-
 impl Direction {
     fn create(direction: &str, amount: i32) -> Direction {
         match direction {
@@ -25,23 +19,12 @@ impl Direction {
             _ => panic!("Could not match: {}", direction),
         }
     }
+}
 
-    fn process(&self, location: &mut Location) -> Location{
-        match self {
-            Direction::Up(i) => Location {
-                height: location.height - i,
-                distance: location.distance,
-            },
-            Direction::Down(i) => Location {
-                height: location.height + i,
-                distance: location.distance,
-            },
-            Direction::Forward(i) => Location {
-                height: location.height,
-                distance: location.distance + i,
-            },
-        }
-    }
+#[derive(Debug)]
+struct Location {
+    height: i32,
+    distance: i32,
 }
 
 impl Location {
@@ -53,15 +36,42 @@ impl Location {
     }
 }
 
-fn main() {
-    let mut location = Location::new();
-    if let Ok(commands) = read_input("./resources/input-dec-2") {
-        for command in commands {
-            location = command.process(&mut location);
+#[derive(Debug)]
+struct Submarine {
+    location: Location,
+}
+
+impl Submarine {
+    fn new() -> Submarine {
+        Submarine {
+            location: Location::new(),
         }
     }
-    println!("{:?}", location);
-    println!("{}", location.height * location.distance)
+
+    fn navigate(&mut self, direction: & Direction) {
+        match direction {
+            Direction::Up(i) => {
+                self.location.height -= i;
+            },
+            Direction::Down(i) => {
+                self.location.height += i;
+            },
+            Direction::Forward(i) => {
+                self.location.distance += i;
+            },
+        }
+    }
+}
+
+fn main() {
+    let mut sub = Submarine::new();
+    if let Ok(commands) = read_input("./resources/input-dec-2") {
+        for command in commands {
+            sub.navigate(&command);
+        }
+    }
+    println!("{:?}", sub);
+    println!("{}", sub.location.height * sub.location.distance)
 }
 
 fn read_input<P>(filename: P) -> io::Result<Vec<Direction>>
