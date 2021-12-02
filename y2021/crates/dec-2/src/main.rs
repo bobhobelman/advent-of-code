@@ -61,6 +61,10 @@ impl Submarine {
             },
         }
     }
+
+    fn give_answer(&self) -> i32 {
+        self.location.height * self.location.distance
+    }
 }
 
 fn main() {
@@ -71,7 +75,7 @@ fn main() {
         }
     }
     println!("{:?}", sub);
-    println!("{}", sub.location.height * sub.location.distance)
+    println!("{}", sub.give_answer())
 }
 
 fn read_input<P>(filename: P) -> io::Result<Vec<Direction>>
@@ -88,4 +92,28 @@ fn read_input<P>(filename: P) -> io::Result<Vec<Direction>>
         }
     });
     Ok(x)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Direction, Submarine};
+
+    #[test]
+    fn test_part_2() {
+        let mut sub = Submarine::new();
+        let commands: Vec<Direction> = vec![
+            Direction::Forward(5),
+            Direction::Down(5),
+            Direction::Forward(8),
+            Direction::Up(3),
+            Direction::Down(8),
+            Direction::Forward(2),
+        ];
+
+        for command in commands {
+            sub.navigate(&command);
+        }
+
+        assert_eq!(sub.give_answer(), 150)
+    }
 }
