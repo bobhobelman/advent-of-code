@@ -23,14 +23,14 @@ impl Direction {
 
 #[derive(Debug)]
 struct Location {
-    height: i32,
+    depth: i32,
     distance: i32,
 }
 
 impl Location {
     fn new() -> Location {
         Location {
-            height: 0,
+            depth: 0,
             distance: 0,
         }
     }
@@ -39,31 +39,34 @@ impl Location {
 #[derive(Debug)]
 struct Submarine {
     location: Location,
+    aim: i32,
 }
 
 impl Submarine {
     fn new() -> Submarine {
         Submarine {
             location: Location::new(),
+            aim: 0,
         }
     }
 
     fn navigate(&mut self, direction: & Direction) {
         match direction {
             Direction::Up(i) => {
-                self.location.height -= i;
+                self.aim -= i;
             },
             Direction::Down(i) => {
-                self.location.height += i;
+                self.aim += i
             },
             Direction::Forward(i) => {
                 self.location.distance += i;
+                self.location.depth += i * self.aim
             },
         }
     }
 
     fn give_answer(&self) -> i32 {
-        self.location.height * self.location.distance
+        self.location.depth * self.location.distance
     }
 }
 
@@ -114,6 +117,6 @@ mod tests {
             sub.navigate(&command);
         }
 
-        assert_eq!(sub.give_answer(), 150)
+        assert_eq!(sub.give_answer(), 900)
     }
 }
