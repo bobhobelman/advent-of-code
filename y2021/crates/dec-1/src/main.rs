@@ -37,8 +37,8 @@ fn cmp_abc_bcd(numbers: Vec<i32>) -> i32 {
 }
 
 fn read_input<P>(filename: P) -> io::Result<Vec<i32>>
-    where
-        P: AsRef<Path>,
+where
+    P: AsRef<Path>,
 {
     let file = File::open(filename)?;
     let x: Vec<i32> = io::BufReader::new(file)

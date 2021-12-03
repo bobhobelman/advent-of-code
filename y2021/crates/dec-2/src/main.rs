@@ -50,18 +50,16 @@ impl Submarine {
         }
     }
 
-    fn navigate(&mut self, direction: & Direction) {
+    fn navigate(&mut self, direction: &Direction) {
         match direction {
             Direction::Up(i) => {
                 self.aim -= i;
-            },
-            Direction::Down(i) => {
-                self.aim += i
-            },
+            }
+            Direction::Down(i) => self.aim += i,
             Direction::Forward(i) => {
                 self.location.distance += i;
                 self.location.depth += i * self.aim
-            },
+            }
         }
     }
 
@@ -82,8 +80,8 @@ fn main() {
 }
 
 fn read_input<P>(filename: P) -> io::Result<Vec<Direction>>
-    where
-        P: AsRef<Path>,
+where
+    P: AsRef<Path>,
 {
     let file = File::open(filename)?;
     let mut x: Vec<Direction> = Vec::new();
