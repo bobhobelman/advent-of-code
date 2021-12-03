@@ -4,96 +4,93 @@ use std::io::BufRead;
 use std::path::Path;
 
 fn main() {
-    let input: Vec<Vec<char>> = read_input("./resources/input-dec-3").unwrap();
-    // "1101".chars().for_each(|c| println!("{:?}", c.to_digit(2).unwrap()));
-    println!("power: {}", calculate_power(input.clone()));
-    println!("support: {}", calculate_life_support(input.clone()));
+    let input: Vec<Vec<u8>> = read_input("./resources/input-dec-3").unwrap();
+    println!("power: {}", calculate_power(&input));
+    println!("support: {}", calculate_life_support(&input));
 }
 
-fn calculate_power(input: Vec<Vec<char>>) -> isize {
-    let mut gamma: Vec<char> = vec![];
-    let mut epsilon: Vec<char> = vec![];
+fn bin_vec_to_int(bin: &[u8]) -> i32 {
+    i32::from_str_radix(&String::from_utf8(bin.to_owned()).unwrap(), 2).unwrap()
+}
+
+fn calculate_power(input: &[Vec<u8>]) -> i32 {
+    let mut gamma: Vec<u8> = vec![];
+    let mut epsilon: Vec<u8> = vec![];
     for i in 0..input[0].len() {
-        let ones = input
-            .iter()
-            .filter(|x| x[i].eq_ignore_ascii_case(&'1'))
-            .count();
-        let zeros = input
-            .iter()
-            .filter(|x| x[i].eq_ignore_ascii_case(&'0'))
-            .count();
+        let ones = input.iter().filter(|x| x[i] == b'1').count();
+        let zeros = input.iter().filter(|x| x[i] == b'0').count();
         assert_eq!(input.len(), ones + zeros);
 
         if ones > zeros {
-            gamma.push('1');
-            epsilon.push('0');
+            gamma.push(b'1');
+            epsilon.push(b'0');
         } else {
-            gamma.push('0');
-            epsilon.push('1');
+            gamma.push(b'0');
+            epsilon.push(b'1');
         }
     }
-    let gamma = isize::from_str_radix(String::from_iter(gamma).as_str(), 2).unwrap();
-    let epsilon = isize::from_str_radix(String::from_iter(epsilon).as_str(), 2).unwrap();
+    let gamma = bin_vec_to_int(&gamma);
+    let epsilon = bin_vec_to_int(&epsilon);
     gamma * epsilon
 }
 
-fn calculate_life_support(input: Vec<Vec<char>>) -> isize {
-    let mut oxygen = input.clone();
+fn calculate_life_support(input: &[Vec<u8>]) -> i32 {
+    let mut oxygen = input.to_owned();
     for c in 0..oxygen[0].len() {
         let mut ones = 0;
         let mut zeros = 0;
         for line in &oxygen {
-            if line[c].eq_ignore_ascii_case(&'1') {
+            if line[c] == b'1' {
                 ones += 1;
             } else {
                 zeros += 1;
             }
         }
         if ones >= zeros {
-            oxygen.retain(|x| x[c].eq_ignore_ascii_case(&'1'));
+            oxygen.retain(|x| x[c] == b'1');
         } else {
-            oxygen.retain(|x| x[c].eq_ignore_ascii_case(&'0'));
+            oxygen.retain(|x| x[c] == b'0');
         }
         if oxygen.len() == 1 {
-            break
+            break;
         }
     }
 
-
-    let mut co2 = input.clone();
+    let mut co2 = input.to_owned();
     for c in 0..co2[0].len() {
         let mut ones = 0;
         let mut zeros = 0;
         for line in &co2 {
-            if line[c].eq_ignore_ascii_case(&'1') {
+            if line[c] == b'1' {
                 ones += 1;
             } else {
                 zeros += 1;
             }
         }
         if zeros <= ones {
-            co2.retain(|x| x[c].eq_ignore_ascii_case(&'0'));
+            co2.retain(|x| x[c] == b'0');
         } else {
-            co2.retain(|x| x[c].eq_ignore_ascii_case(&'1'));
+            co2.retain(|x| x[c] == b'1');
         }
         if co2.len() == 1 {
-            break
+            break;
         }
     }
-    let oxygen = isize::from_str_radix(String::from_iter(&oxygen[0]).as_str(), 2).unwrap();
-    let co2 = isize::from_str_radix(String::from_iter(&co2[0]).as_str(), 2).unwrap();
+    let oxygen = bin_vec_to_int(&oxygen[0]);
+    let co2 = bin_vec_to_int(&co2[0]);
     oxygen * co2
 }
 
-fn read_input<P>(filename: P) -> io::Result<Vec<Vec<char>>>
-    where
-        P: AsRef<Path>,
+fn read_input<P>(filename: P) -> io::Result<Vec<Vec<u8>>>
+where
+    P: AsRef<Path>,
 {
     let file = File::open(filename)?;
-    let mut x: Vec<Vec<char>> = Vec::new();
+    let mut x: Vec<Vec<u8>> = Vec::new();
     io::BufReader::new(file).lines().for_each(|line| {
-        let bl = Vec::from_iter(line.unwrap().chars());
-        x.push(bl);
+        if let Ok(line) = line {
+            x.push(line.into_bytes());
+        }
     });
     Ok(x)
 }
@@ -103,41 +100,22 @@ mod tests {
     use crate::{calculate_life_support, calculate_power};
 
     #[test]
-    fn test_part_1() {
-        let input: Vec<Vec<char>> = vec![
-            vec!['0', '0', '1', '0', '0'],
-            vec!['1', '1', '1', '1', '0'],
-            vec!['1', '0', '1', '1', '0'],
-            vec!['1', '0', '1', '1', '1'],
-            vec!['1', '0', '1', '0', '1'],
-            vec!['0', '1', '1', '1', '1'],
-            vec!['0', '0', '1', '1', '1'],
-            vec!['1', '1', '1', '0', '0'],
-            vec!['1', '0', '0', '0', '0'],
-            vec!['1', '1', '0', '0', '1'],
-            vec!['0', '0', '0', '1', '0'],
-            vec!['0', '1', '0', '1', '0'],
+    fn test() {
+        let input: Vec<Vec<u8>> = vec![
+            vec![b'0', b'0', b'1', b'0', b'0'],
+            vec![b'1', b'1', b'1', b'1', b'0'],
+            vec![b'1', b'0', b'1', b'1', b'0'],
+            vec![b'1', b'0', b'1', b'1', b'1'],
+            vec![b'1', b'0', b'1', b'0', b'1'],
+            vec![b'0', b'1', b'1', b'1', b'1'],
+            vec![b'0', b'0', b'1', b'1', b'1'],
+            vec![b'1', b'1', b'1', b'0', b'0'],
+            vec![b'1', b'0', b'0', b'0', b'0'],
+            vec![b'1', b'1', b'0', b'0', b'1'],
+            vec![b'0', b'0', b'0', b'1', b'0'],
+            vec![b'0', b'1', b'0', b'1', b'0'],
         ];
-        assert_eq!(calculate_power(input), 198)
-    }
-
-    #[test]
-    fn test_part_2() {
-        let input: Vec<Vec<char>> = vec![
-            vec!['0', '0', '1', '0', '0'],
-            vec!['1', '1', '1', '1', '0'],
-            vec!['1', '0', '1', '1', '0'],
-            vec!['1', '0', '1', '1', '1'],
-            vec!['1', '0', '1', '0', '1'],
-            vec!['0', '1', '1', '1', '1'],
-            vec!['0', '0', '1', '1', '1'],
-            vec!['1', '1', '1', '0', '0'],
-            vec!['1', '0', '0', '0', '0'],
-            vec!['1', '1', '0', '0', '1'],
-            vec!['0', '0', '0', '1', '0'],
-            vec!['0', '1', '0', '1', '0'],
-        ];
-
-        assert_eq!(calculate_life_support(input), 230)
+        assert_eq!(calculate_power(&input), 198);
+        assert_eq!(calculate_life_support(&input), 230);
     }
 }
