@@ -10,6 +10,12 @@ use std::path::Path;
 use std::slice::Iter;
 use std::str::FromStr;
 
+#[derive(Eq, PartialEq)]
+enum Puzzle {
+    One,
+    Two,
+}
+
 #[derive(Clone, Copy, Debug)]
 struct Number {
     value: i32,
@@ -49,13 +55,14 @@ impl Display for Number {
 #[derive(Clone)]
 struct Card {
     field: Grid<Number>,
+    bingo: bool,
 }
 
 impl Card {
-
     fn new(rows: usize, cols: usize) -> Card {
         Card {
             field: Grid::new(rows, cols),
+            bingo: false,
         }
     }
 
@@ -63,11 +70,11 @@ impl Card {
         self.field.push_row(row)
     }
 
-    fn rows(&self) -> usize{
+    fn rows(&self) -> usize {
         self.field.rows()
     }
 
-    fn cols(&self) -> usize{
+    fn cols(&self) -> usize {
         self.field.cols()
     }
 
@@ -85,6 +92,14 @@ impl Card {
 
     fn is_empty(&self) -> bool {
         self.field.is_empty()
+    }
+
+    fn had_bingo(&self) -> bool {
+        self.bingo
+    }
+
+    fn bingo(&mut self) {
+        self.bingo = true;
     }
 
     fn print(&self) {
@@ -110,27 +125,37 @@ impl Card {
     }
 
     fn sum_unmarked(&self) -> i32 {
-        self.field.iter().filter(|n| !n.marked).map(|n| n.value).sum()
+        self.field
+            .iter()
+            .filter(|n| !n.marked)
+            .map(|n| n.value)
+            .sum()
     }
 }
-
-
-
-
-
 
 fn main() {
     if let Ok((numbers, cards)) = read_input("./resources/input-dec-4") {
-        let bingo = play_bingo(numbers, cards);
+        let bingo = play_bingo(numbers, cards, Puzzle::One);
         println!("Bingo: {}", bingo);
+    }
+
+    if let Ok((numbers, cards)) = read_input("./resources/input-dec-4") {
+        let bingo = play_bingo(numbers, cards, Puzzle::Two);
+        println!("Last Bingo: {}", bingo);
     }
 }
 
-fn play_bingo(numbers: Vec<i32>, mut cards: Vec<Card>) -> i32 {
+fn play_bingo(numbers: Vec<i32>, mut cards: Vec<Card>, puzzle: Puzzle) -> i32 {
+    let mut last_card = false;
     for number in numbers.iter() {
+        cards.retain(|card| !card.had_bingo());
+        if cards.len() == 1 {
+            last_card = true;
+        }
+
         let mut check_card = false;
         for card in cards.iter_mut() {
-            for mut card_number in card.field.iter_mut() {
+            for card_number in card.field.iter_mut() {
                 if card_number.value.eq(number) {
                     card_number.marked = true;
                     check_card = true;
@@ -140,12 +165,18 @@ fn play_bingo(numbers: Vec<i32>, mut cards: Vec<Card>) -> i32 {
                 check_card = false;
                 for row in 0..card.rows() {
                     if card.iter_row(row).filter(|x| x.marked.eq(&true)).count() == 5 {
-                        return card.calculate_print_winner(number);
+                        card.bingo();
+                        if last_card || puzzle == Puzzle::One {
+                            return card.calculate_print_winner(number);
+                        }
                     }
                 }
                 for col in 0..card.cols() {
                     if card.iter_col(col).filter(|x| x.marked.eq(&true)).count() == 5 {
-                        return card.calculate_print_winner(number);
+                        card.bingo();
+                        if last_card || puzzle == Puzzle::One {
+                            return card.calculate_print_winner(number);
+                        }
                     }
                 }
             }
@@ -155,8 +186,8 @@ fn play_bingo(numbers: Vec<i32>, mut cards: Vec<Card>) -> i32 {
 }
 
 fn read_input<P>(filename: P) -> io::Result<(Vec<i32>, Vec<Card>)>
-    where
-        P: AsRef<Path>,
+where
+    P: AsRef<Path>,
 {
     let mut numbers: Vec<i32> = Vec::new();
     let mut cards: Vec<Card> = Vec::new();
@@ -199,15 +230,37 @@ fn read_input<P>(filename: P) -> io::Result<(Vec<i32>, Vec<Card>)>
 
 #[cfg(test)]
 mod tests {
-    use crate::{play_bingo, read_input};
+    use crate::{play_bingo, read_input, Puzzle};
 
     #[test]
-    fn test() {
+    fn test_1() {
         let expected = 4512;
         match read_input("./resources/test-input-dec-4") {
             Ok((numbers, cards)) => {
-                let bingo = play_bingo(numbers, cards);
-                assert_eq!(bingo, expected, "Response: {}, should be: {}", bingo, expected)
+                let bingo = play_bingo(numbers, cards, Puzzle::One);
+                assert_eq!(
+                    bingo, expected,
+                    "Response: {}, should be: {}",
+                    bingo, expected
+                )
+            }
+            Err(error) => {
+                println!("{}", error)
+            }
+        }
+    }
+
+    #[test]
+    fn test_2() {
+        let expected = 1924;
+        match read_input("./resources/test-input-dec-4") {
+            Ok((numbers, cards)) => {
+                let bingo = play_bingo(numbers, cards, Puzzle::Two);
+                assert_eq!(
+                    bingo, expected,
+                    "Response: {}, should be: {}",
+                    bingo, expected
+                )
             }
             Err(error) => {
                 println!("{}", error)
