@@ -1,4 +1,4 @@
-use ansi_term::Style;
+use ansi_term::{Colour, Style};
 use grid::*;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
@@ -15,8 +15,9 @@ struct Thickness {
 impl Display for Thickness {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let number = match self.number {
-            0 => Style::new().bold().paint(format!("{:03}", 0)),
-            x => Style::new().paint(format!("{:03}", x)),
+            0 => Style::new().fg(Colour::Blue).paint("#"),
+            1 => Style::new().fg(Colour::Green).bold().paint("#"),
+            _ => Style::new().fg(Colour::Red).bold().paint("#"),
         };
         write!(f, "{} ", number)
     }
@@ -38,7 +39,7 @@ impl Thickness {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
 struct Location {
     x: usize,
     y: usize,
@@ -59,20 +60,57 @@ impl FromStr for Location {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
 struct Cloud {
     from: Location,
     to: Location,
+}
+
+impl Iterator for Cloud {
+    type Item = Cloud;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &self {
+            cloud if cloud.from.x == cloud.to.x && cloud.from.y < cloud.to.y => {
+                self.from.y += 1;
+            }
+            cloud if cloud.from.x == cloud.to.x && cloud.from.y > cloud.to.y => {
+                self.from.y -= 1;
+            }
+            cloud if cloud.from.x < cloud.to.x && cloud.from.y == cloud.to.y => self.from.x += 1,
+            cloud if cloud.from.x > cloud.to.x && cloud.from.y == cloud.to.y => self.from.x -= 1,
+            cloud if cloud.from.x < cloud.to.x && cloud.from.y < cloud.to.y => {
+                self.from.x += 1;
+                self.from.y += 1;
+            }
+            cloud if cloud.from.x > cloud.to.x && cloud.from.y > cloud.to.y => {
+                self.from.x -= 1;
+                self.from.y -= 1;
+            }
+            cloud if cloud.from.x < cloud.to.x && cloud.from.y > cloud.to.y => {
+                self.from.x += 1;
+                self.from.y -= 1;
+            }
+            cloud if cloud.from.x > cloud.to.x && cloud.from.y < cloud.to.y => {
+                self.from.x -= 1;
+                self.from.y += 1;
+            }
+            _ => {
+                return None;
+            }
+        }
+        Some(*self)
+    }
 }
 
 impl FromStr for Cloud {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some((first, second)) = s.split_once(" -> ") {
+        if let Some((from, to)) = s.split_once(" -> ") {
             Ok(Cloud {
-                from: first.parse::<Location>().unwrap(),
-                to: second.parse::<Location>().unwrap(),
+                from: from.parse::<Location>().unwrap(),
+                to: to.parse::<Location>().unwrap(),
             })
         } else {
             panic!("Could not parse cloud.")
@@ -91,49 +129,63 @@ fn print(grid: Grid<Thickness>) {
 
 fn main() {
     if let Ok(clouds) = read_input("./resources/input-dec-5") {
-        let cloudy_points = process_clouds(clouds);
+        let map = process_clouds_1(clouds);
+        let cloudy_points = map.iter().filter(|location| location.cloudy()).count();
+        println!("Number of cloudy points: {}", cloudy_points);
+    }
+
+    if let Ok(clouds) = read_input("./resources/input-dec-5") {
+        let map = process_clouds_2(clouds);
+        let cloudy_points = map.iter().filter(|location| location.cloudy()).count();
         println!("Number of cloudy points: {}", cloudy_points);
     }
 }
 
-fn process_clouds(clouds: Vec<Cloud>) -> usize {
-    let mut grid: Grid<Thickness> = Grid::new(1000, 1000);
+fn process_clouds_1(clouds: Vec<Cloud>) -> Grid<Thickness> {
+    let max = match clouds.iter().map(|cloud| cloud.from.max(cloud.to)).max() {
+        Some(location) => location.x.max(location.y),
+        None => {
+            panic!("No max found!")
+        }
+    };
+
+    let mut grid: Grid<Thickness> = Grid::new(max + 1, max + 1);
     for cloud in clouds {
-        match cloud {
-            cloud if cloud.from.le(&cloud.to) && cloud.from.x == cloud.to.x => {
-                for y in cloud.from.y..=cloud.to.y {
-                    if let Some(location) = grid.get_mut(cloud.from.x, y) {
-                        location.add_cloud();
-                    }
-                }
+        if cloud.from.x == cloud.to.x || cloud.from.y == cloud.to.y {
+            if let Some(location) = grid.get_mut(cloud.from.y, cloud.from.x) {
+                location.add_cloud();
             }
-            cloud if cloud.from.le(&cloud.to) && cloud.from.y == cloud.to.y => {
-                for x in cloud.from.x..=cloud.to.x {
-                    if let Some(location) = grid.get_mut(x, cloud.from.y) {
-                        location.add_cloud();
-                    }
+            for cloud in cloud {
+                println!("{:?}", cloud);
+                if let Some(location) = grid.get_mut(cloud.from.y, cloud.from.x) {
+                    location.add_cloud();
                 }
-            }
-            cloud if cloud.from.gt(&cloud.to) && cloud.from.x == cloud.to.x => {
-                for y in cloud.to.y..=cloud.from.y {
-                    if let Some(location) = grid.get_mut(cloud.from.x, y) {
-                        location.add_cloud();
-                    }
-                }
-            }
-            cloud if cloud.from.gt(&cloud.to) && cloud.from.y == cloud.to.y => {
-                for x in cloud.to.x..=cloud.from.x {
-                    if let Some(location) = grid.get_mut(x, cloud.from.y) {
-                        location.add_cloud();
-                    }
-                }
-            }
-            cloud => {
-                println!("No needto handle: {:?}", cloud);
             }
         }
     }
-    grid.iter().filter(|location| location.cloudy()).count()
+    grid
+}
+
+fn process_clouds_2(clouds: Vec<Cloud>) -> Grid<Thickness> {
+    let max = match clouds.iter().map(|cloud| cloud.from.max(cloud.to)).max() {
+        Some(location) => location.x.max(location.y),
+        None => {
+            panic!("No max found!")
+        }
+    };
+
+    let mut grid: Grid<Thickness> = Grid::new(max + 1, max + 1);
+    for cloud in clouds {
+        if let Some(location) = grid.get_mut(cloud.from.y, cloud.from.x) {
+            location.add_cloud();
+        }
+        for cloud in cloud {
+            if let Some(location) = grid.get_mut(cloud.from.y, cloud.from.x) {
+                location.add_cloud();
+            }
+        }
+    }
+    grid
 }
 
 fn read_input<P>(filename: P) -> io::Result<Vec<Cloud>>
@@ -155,14 +207,67 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{process_clouds, read_input};
+    use crate::{print, process_clouds_1, process_clouds_2, read_input, Cloud, Location};
 
     #[test]
     fn solution_1() {
-        if let Ok(clouds) = read_input("./resources/test-input-dec-5") {
-            let cloudy_points = process_clouds(clouds);
-            println!("Number of cloudy points: {}", cloudy_points);
-            assert_eq!(cloudy_points, 5)
+        match read_input("../../resources/test-input-dec-5")
+        {
+            Ok(clouds) => {
+                let map = process_clouds_1(clouds);
+                let cloudy_points = map.iter().filter(|location| location.cloudy()).count();
+                print(map);
+                println!("Number of cloudy points: {}", cloudy_points);
+                assert_eq!(cloudy_points, 5)
+            }
+            Err(error) => {
+                println!("Error: {}", error);
+                panic!("Dit not test it at all!");
+            }
         }
+    }
+
+    #[test]
+    fn solution_2() {
+        match read_input("../../resources/test-input-dec-5")
+        {
+            Ok(clouds) => {
+                let map = process_clouds_2(clouds);
+                let cloudy_points = map.iter().filter(|location| location.cloudy()).count();
+                print(map);
+                println!("Number of cloudy points: {}", cloudy_points);
+                assert_eq!(cloudy_points, 12)
+            }
+            Err(error) => {
+                println!("Error: {}", error);
+                panic!("Dit not test it at all!");
+            }
+        }
+    }
+
+    #[test]
+    fn iterator() {
+        let mut cloud = Cloud {
+            from: Location { x: 0, y: 0 },
+            to: Location { x: 0, y: 3 },
+        };
+
+        let cloud_1 = Cloud {
+            from: Location { x: 0, y: 1 },
+            to: Location { x: 0, y: 3 },
+        };
+        let cloud_2 = Cloud {
+            from: Location { x: 0, y: 2 },
+            to: Location { x: 0, y: 3 },
+        };
+        let cloud_3 = Cloud {
+            from: Location { x: 0, y: 3 },
+            to: Location { x: 0, y: 3 },
+        };
+
+        assert_eq!(cloud.next().unwrap(), cloud_1);
+        assert_eq!(cloud.next().unwrap(), cloud_2);
+        assert_eq!(cloud.next().unwrap(), cloud_3);
+        assert_eq!(cloud.next(), None);
     }
 }

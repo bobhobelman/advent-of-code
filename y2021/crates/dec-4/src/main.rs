@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn test_1() {
         let expected = 4512;
-        match read_input("./resources/test-input-dec-4") {
+        match read_input("../../resources/test-input-dec-4") {
             Ok((numbers, cards)) => {
                 let bingo = play_bingo(numbers, cards, Puzzle::One);
                 assert_eq!(
@@ -245,7 +245,8 @@ mod tests {
                 )
             }
             Err(error) => {
-                println!("{}", error)
+                println!("{}", error);
+                panic!("Dit not test it at all!");
             }
         }
     }
@@ -253,7 +254,7 @@ mod tests {
     #[test]
     fn test_2() {
         let expected = 1924;
-        match read_input("./resources/test-input-dec-4") {
+        match read_input("../../resources/test-input-dec-4") {
             Ok((numbers, cards)) => {
                 let bingo = play_bingo(numbers, cards, Puzzle::Two);
                 assert_eq!(
@@ -263,7 +264,8 @@ mod tests {
                 )
             }
             Err(error) => {
-                println!("{}", error)
+                println!("{}", error);
+                panic!("Dit not test it at all!");
             }
         }
     }
