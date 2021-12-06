@@ -137,6 +137,7 @@ fn main() {
     if let Ok(clouds) = read_input("./resources/input-dec-5") {
         let map = process_clouds_2(clouds);
         let cloudy_points = map.iter().filter(|location| location.cloudy()).count();
+        print(map);
         println!("Number of cloudy points: {}", cloudy_points);
     }
 }
@@ -156,7 +157,6 @@ fn process_clouds_1(clouds: Vec<Cloud>) -> Grid<Thickness> {
                 location.add_cloud();
             }
             for cloud in cloud {
-                println!("{:?}", cloud);
                 if let Some(location) = grid.get_mut(cloud.from.y, cloud.from.x) {
                     location.add_cloud();
                 }
@@ -211,8 +211,7 @@ mod tests {
 
     #[test]
     fn solution_1() {
-        match read_input("../../resources/test-input-dec-5")
-        {
+        match read_input("../../resources/test-input-dec-5") {
             Ok(clouds) => {
                 let map = process_clouds_1(clouds);
                 let cloudy_points = map.iter().filter(|location| location.cloudy()).count();
@@ -229,8 +228,7 @@ mod tests {
 
     #[test]
     fn solution_2() {
-        match read_input("../../resources/test-input-dec-5")
-        {
+        match read_input("../../resources/test-input-dec-5") {
             Ok(clouds) => {
                 let map = process_clouds_2(clouds);
                 let cloudy_points = map.iter().filter(|location| location.cloudy()).count();
