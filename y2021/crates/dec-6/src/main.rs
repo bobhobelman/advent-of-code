@@ -10,10 +10,12 @@ fn main() {
         let mut fishes_counted: u64 = 0;
         let mut precounted: HashMap<u8, u64> = HashMap::new();
         for fish in fishes {
-            let fishes = precounted.entry(fish.timer_to_birth).or_insert(fish.night_quick(256));
+            let fishes = precounted
+                .entry(fish.timer_to_birth)
+                .or_insert_with(|| fish.night_quick(256));
             fishes_counted += *fishes
         }
-        println!("Fishes: {}", fishes_counted)
+        println!("Fishes: {}", fishes_counted) // expect: for 80: 353079 for 256:1605400130036
     }
 }
 
@@ -36,12 +38,12 @@ impl Fish {
         match self.timer_to_birth {
             0 => {
                 self.reset();
-                fishes.push(self.clone());
+                fishes.push(*self);
                 fishes.push(Fish::new())
             }
             _ => {
                 self.timer_to_birth -= 1;
-                fishes.push(self.clone());
+                fishes.push(*self);
             }
         }
         fishes
@@ -50,7 +52,7 @@ impl Fish {
     fn night_quick(&self, nights: u64) -> u64 {
         let mut fishes = vec![*self];
         for _ in 0..nights {
-            let mut new_fishes: Vec<Fish>= Vec::new();
+            let mut new_fishes: Vec<Fish> = Vec::new();
             for fish in fishes.iter_mut() {
                 new_fishes.append(&mut fish.night());
             }
@@ -66,7 +68,7 @@ impl Fish {
             3 => 5217223242,
             4 => 4726100874,
             5 => 4368232009,
-            _ => panic!("Wrong number")
+            _ => panic!("Wrong number"),
         }
     }
 }
@@ -104,8 +106,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use crate::{read_input, Fish};
+    use std::collections::HashMap;
 
     #[test]
     fn solution_1() {
@@ -126,9 +128,9 @@ mod tests {
     fn solution_2() {
         if let Ok(fishes) = read_input("../../resources/test-input-dec-6") {
             let mut fishes_counted: u64 = 0;
-                for mut fish in fishes {
-                    fishes_counted += fish.quick_256_night();
-                }
+            for mut fish in fishes {
+                fishes_counted += fish.quick_256_night();
+            }
             assert_eq!(fishes_counted, 26984457539)
         }
     }
@@ -139,7 +141,9 @@ mod tests {
             let mut fishes_counted: u64 = 0;
             let mut precounted: HashMap<u8, u64> = HashMap::new();
             for fish in fishes {
-                let fishes = precounted.entry(fish.timer_to_birth).or_insert(fish.night_quick(80));
+                let fishes = precounted
+                    .entry(fish.timer_to_birth)
+                    .or_insert(fish.night_quick(80));
                 fishes_counted += *fishes
             }
             assert_eq!(fishes_counted, 5934)
