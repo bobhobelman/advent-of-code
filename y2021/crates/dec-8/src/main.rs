@@ -21,15 +21,19 @@ impl Clone for Number {
 }
 
 impl Number {
-    fn new(i: i32, s: &str) -> Number {
+    fn new(value: i32, chars: &str) -> Number {
         Number {
-            value: i,
-            chars: s.to_string(),
+            value,
+            chars: chars.to_string(),
         }
     }
 
     fn to_regex(&self) -> Regex {
         Regex::new(format!("[{}]", self.chars).as_str()).unwrap()
+    }
+
+    fn equal(&self, other: &str) -> bool {
+        self.to_regex().find_iter(other).count().eq(&other.len()) && self.chars.len() == other.len()
     }
 }
 
@@ -53,6 +57,24 @@ struct Display {
     nine: Option<Number>,
 }
 
+trait Analyzer {
+    type Value;
+    fn equals(&self, s: &str) -> bool;
+    fn count_same_chars(&self, s: &str) -> i32;
+}
+
+impl Analyzer for Option<Number> {
+    type Value = i32;
+
+    fn equals(&self, other: &str) -> bool {
+        self.as_ref().unwrap().equal(other)
+    }
+
+    fn count_same_chars(&self, number: &str) -> i32 {
+        self.as_ref().unwrap().to_regex().find_iter(number).count() as i32
+    }
+}
+
 impl Display {
     fn new() -> Display {
         Display {
@@ -67,13 +89,6 @@ impl Display {
             eight: None,
             nine: None,
         }
-    }
-
-    fn try_regex_count(&self, number: Option<Number>, s: &str) -> Option<i32> {
-        if let Some(number) = number {
-            return Some(number.to_regex().find_iter(s).count() as i32);
-        }
-        None
     }
 
     fn analyze_number(&mut self, number: &str) {
@@ -92,11 +107,11 @@ impl Display {
             }
             x => match x {
                 x if x.len() == 5 => match x {
-                    x if self.try_regex_count(self.seven.clone(), x) == Some(3) => {
+                    x if self.seven.count_same_chars(x) == 3 => {
                         //7
                         self.three = Some(Number::new(3, x));
                     }
-                    x if self.try_regex_count(self.four.clone(), x) == Some(2) => {
+                    x if self.four.count_same_chars(x) == 2 => {
                         //4
                         self.two = Some(Number::new(2, x));
                     }
@@ -105,12 +120,12 @@ impl Display {
                     }
                 },
                 x if x.len() == 6 => match x {
-                    x if self.try_regex_count(self.five.clone(), x) == Some(5)
-                        && self.try_regex_count(self.one.clone(), x) == Some(1) =>
+                    x if self.five.count_same_chars(x) == 5
+                        && self.one.count_same_chars(x) == 1 =>
                     {
                         self.six = Some(Number::new(6, x));
                     }
-                    x if self.try_regex_count(self.five.clone(), x) == Some(5) => {
+                    x if self.five.count_same_chars(x) == 5 => {
                         self.nine = Some(Number::new(9, x));
                     }
                     x => {
@@ -124,116 +139,16 @@ impl Display {
 
     fn determine_number(&self, str: &str) -> i32 {
         match str {
-            str if self
-                .zero
-                .clone()
-                .unwrap()
-                .to_regex()
-                .find_iter(str)
-                .count()
-                .eq(&self.zero.clone().unwrap().chars.len()) && self.zero.clone().unwrap().chars.len() == str.len() =>
-            {
-                0
-            }
-            str if self
-                .one
-                .clone()
-                .unwrap()
-                .to_regex()
-                .find_iter(str)
-                .count()
-                .eq(&self.one.clone().unwrap().chars.len()) && self.one.clone().unwrap().chars.len() == str.len() =>
-            {
-                1
-            }
-            str if self
-                .two
-                .clone()
-                .unwrap()
-                .to_regex()
-                .find_iter(str)
-                .count()
-                .eq(&self.two.clone().unwrap().chars.len()) && self.two.clone().unwrap().chars.len() == str.len() =>
-            {
-                2
-            }
-            str if self
-                .three
-                .clone()
-                .unwrap()
-                .to_regex()
-                .find_iter(str)
-                .count()
-                .eq(&self.three.clone().unwrap().chars.len()) && self.three.clone().unwrap().chars.len() == str.len() =>
-            {
-                3
-            }
-            str if self
-                .four
-                .clone()
-                .unwrap()
-                .to_regex()
-                .find_iter(str)
-                .count()
-                .eq(&self.four.clone().unwrap().chars.len()) && self.four.clone().unwrap().chars.len() == str.len() =>
-            {
-                4
-            }
-            str if self
-                .five
-                .clone()
-                .unwrap()
-                .to_regex()
-                .find_iter(str)
-                .count()
-                .eq(&self.five.clone().unwrap().chars.len()) && self.five.clone().unwrap().chars.len() == str.len() =>
-            {
-                5
-            }
-            str if self
-                .six
-                .clone()
-                .unwrap()
-                .to_regex()
-                .find_iter(str)
-                .count()
-                .eq(&self.six.clone().unwrap().chars.len()) && self.six.clone().unwrap().chars.len() == str.len() =>
-            {
-                6
-            }
-            str if self
-                .seven
-                .clone()
-                .unwrap()
-                .to_regex()
-                .find_iter(str)
-                .count()
-                .eq(&self.seven.clone().unwrap().chars.len()) && self.seven.clone().unwrap().chars.len() == str.len() =>
-            {
-                7
-            }
-            str if self
-                .eight
-                .clone()
-                .unwrap()
-                .to_regex()
-                .find_iter(str)
-                .count()
-                .eq(&self.eight.clone().unwrap().chars.len()) && self.eight.clone().unwrap().chars.len() == str.len() =>
-            {
-                8
-            }
-            str if self
-                .nine
-                .clone()
-                .unwrap()
-                .to_regex()
-                .find_iter(str)
-                .count()
-                .eq(&self.nine.clone().unwrap().chars.len()) && self.nine.clone().unwrap().chars.len() == str.len() =>
-            {
-                9
-            }
+            str if self.zero.equals(str) => 0,
+            str if self.one.equals(str) => 1,
+            str if self.two.equals(str) => 2,
+            str if self.three.equals(str) => 3,
+            str if self.four.equals(str) => 4,
+            str if self.five.equals(str) => 5,
+            str if self.six.equals(str) => 6,
+            str if self.seven.equals(str) => 7,
+            str if self.eight.equals(str) => 8,
+            str if self.nine.equals(str) => 9,
             _ => panic!("Could not determine number!"),
         }
     }
@@ -241,8 +156,10 @@ impl Display {
 
 fn main() {
     if let Ok(mut displays) = read_input("./resources/input-dec-8") {
-
-        let times = displays.clone().into_iter().flatten()
+        let times = displays
+            .clone()
+            .into_iter()
+            .flatten()
             .filter(|x| x.len() == 2 || x.len() == 3 || x.len() == 4 || x.len() == 7)
             .count();
         println!("Digits 1, 4, 7, or 8 appear {} times.", times);
@@ -251,17 +168,24 @@ fn main() {
 
         for d in displays.iter_mut() {
             let mut display = Display::new();
+
+            // Analyze the numbers
             d[..10].sort_by(|x, y| x.len().cmp(&y.len()));
             for n in d[..10].iter() {
                 display.analyze_number(n);
             }
 
+            // Get the numbers shown on display
             let mut number: Vec<i32> = Vec::new();
             for n in d[11..].iter() {
                 let i = display.determine_number(n);
                 number.push(i);
             }
-            numbers.push(number.iter().fold(0, |acc, elem| acc * 10 + elem));
+
+            // Combine the separate digits to one value
+            let number = number.iter().fold(0, |acc, elem| acc * 10 + elem);
+
+            numbers.push(number);
         }
         println!("Sum of all displays: {}", numbers.iter().sum::<i32>());
     }
