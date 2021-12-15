@@ -7,35 +7,41 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 enum Synced {
-    No(u64),
-    Yes(u64, u32),
+    No { flashes: u32 },
+    Yes { flashes: u32, synced_step: u32 },
 }
 
 impl Synced {
-    fn flashes(&self) -> u64 {
+    fn flashes(&self) -> u32 {
         match self {
-            Synced::No(f) => *f,
-            Synced::Yes(f, _) => *f,
+            Synced::No { flashes } => *flashes,
+            Synced::Yes {
+                flashes,
+                synced_step: _,
+            } => *flashes,
         }
     }
 
     fn step_in_sync(&self) -> Option<u32> {
         match self {
-            Synced::No(_) => None,
-            Synced::Yes(_, s) => Some(*s),
+            Synced::No { flashes: _ } => None,
+            Synced::Yes {
+                flashes: _,
+                synced_step,
+            } => Some(*synced_step),
         }
     }
 }
 
 #[derive(Clone)]
 struct Octopus {
-    energy: u64,
+    energy: u32,
     flash: bool,
-    flashes: u64,
+    flashes: u32,
 }
 
 impl Octopus {
-    fn new(energy: u64) -> Octopus {
+    fn new(energy: u32) -> Octopus {
         Octopus {
             energy,
             flash: false,
@@ -46,11 +52,12 @@ impl Octopus {
     fn step(&mut self) -> bool {
         if !self.flash {
             self.energy += 1;
-        }
-        if self.energy > 9 && !self.flash {
-            self.flash = true;
-            self.flashes += 1;
-            return true;
+
+            if self.energy > 9 {
+                self.flash = true;
+                self.flashes += 1;
+                return true;
+            }
         }
         false
     }
@@ -63,13 +70,13 @@ impl Octopus {
 
 impl Display for Octopus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let number = match self.flash {
-            false => Style::new()
-                .fg(Colour::Blue)
+        let number = match self.energy {
+            0 => Style::new()
+                .fg(Colour::Yellow)
                 .bold()
                 .paint(format!("{}", self.energy)),
-            true => Style::new()
-                .fg(Colour::Yellow)
+            _ => Style::new()
+                .fg(Colour::Blue)
                 .bold()
                 .paint(format!("{}", self.energy)),
         };
@@ -80,7 +87,11 @@ impl Display for Octopus {
 trait OctopusGrid {
     fn print(&self);
     fn step_neighbours(&mut self, x: usize, y: usize);
-    fn neighbour_step(&mut self, x: usize, y: usize);
+    fn step(&mut self, x: usize, y: usize);
+    fn process_steps(&mut self, steps: u32) -> Synced;
+    fn in_sync(&self) -> bool;
+    fn total_flashes(&self) -> u32;
+    fn steps_to_get_in_sync(&mut self) -> u32;
 }
 
 impl OctopusGrid for Grid<Octopus> {
@@ -95,86 +106,119 @@ impl OctopusGrid for Grid<Octopus> {
 
     fn step_neighbours(&mut self, x: usize, y: usize) {
         if let (Some(x), Some(y)) = (x.checked_add(1), y.checked_sub(1)) {
-            self.neighbour_step(x, y);
+            self.step(x, y);
         }
         if let (Some(x), Some(y)) = (x.checked_add(1), Some(y)) {
-            self.neighbour_step(x, y);
+            self.step(x, y);
         }
         if let (Some(x), Some(y)) = (x.checked_add(1), y.checked_add(1)) {
-            self.neighbour_step(x, y);
+            self.step(x, y);
         }
         if let (Some(x), Some(y)) = (Some(x), y.checked_sub(1)) {
-            self.neighbour_step(x, y);
+            self.step(x, y);
         }
         if let (Some(x), Some(y)) = (Some(x), y.checked_add(1)) {
-            self.neighbour_step(x, y);
+            self.step(x, y);
         }
         if let (Some(x), Some(y)) = (x.checked_sub(1), y.checked_sub(1)) {
-            self.neighbour_step(x, y);
+            self.step(x, y);
         }
         if let (Some(x), Some(y)) = (x.checked_sub(1), Some(y)) {
-            self.neighbour_step(x, y);
+            self.step(x, y);
         }
         if let (Some(x), Some(y)) = (x.checked_sub(1), y.checked_add(1)) {
-            self.neighbour_step(x, y);
+            self.step(x, y);
         }
     }
 
-    fn neighbour_step(&mut self, x: usize, y: usize) {
+    fn step(&mut self, x: usize, y: usize) {
         if let Some(octopus) = self.get_mut(x, y) {
             if octopus.step() {
                 self.step_neighbours(x, y);
             }
         }
     }
-}
 
-fn process_steps(mut cavern: Grid<Octopus>, steps: u32) -> Synced {
-    let mut synced_step = 0;
-    // cavern.print();
-    for i in 0..steps {
-        for x in 0..cavern.rows() {
-            for y in 0..cavern.cols() {
-                if let Some(octopus) = cavern.get_mut(x, y) {
-                    if octopus.step() {
-                        cavern.step_neighbours(x, y);
-                    }
+    fn process_steps(&mut self, steps: u32) -> Synced {
+        let mut synced_step: Option<u32> = None;
+
+        for i in 0..steps {
+            for x in 0..self.rows() {
+                for y in 0..self.cols() {
+                    self.step(x, y);
                 }
             }
+            self.iter_mut().filter(|o| o.flash).for_each(|o| o.reset());
+
+            if self.in_sync() && synced_step.is_none() {
+                synced_step = Some(i + 1);
+            }
         }
-        // cavern.print();
-        cavern
-            .iter_mut()
-            .filter(|o| o.flash)
-            .for_each(|o| o.reset());
-        if cavern
-            .iter()
-            .all(|x| x.energy == cavern.get(0, 0).unwrap().energy)
-            && synced_step == 0
-        {
-            synced_step = i + 1;
+
+        let flashes = self.total_flashes();
+
+        if let Some(synced_step) = synced_step {
+            Synced::Yes {
+                flashes,
+                synced_step,
+            }
+        } else {
+            Synced::No { flashes }
         }
     }
-    let flashes = cavern.iter().map(|x| x.flashes).sum::<u64>();
-    if synced_step == 0 {
-        Synced::No(flashes)
-    } else {
-        Synced::Yes(flashes, synced_step)
+
+    fn in_sync(&self) -> bool {
+        self.iter()
+            .all(|x| x.energy == self.get(0, 0).unwrap().energy)
+    }
+
+    fn total_flashes(&self) -> u32 {
+        self.iter().map(|x| x.flashes).sum::<u32>()
+    }
+
+    fn steps_to_get_in_sync(&mut self) -> u32 {
+        let mut steps = 0;
+        while !self.in_sync() {
+            for x in 0..self.rows() {
+                for y in 0..self.cols() {
+                    self.step(x, y);
+                }
+            }
+            self.iter_mut().filter(|o| o.flash).for_each(|o| o.reset());
+            steps += 1;
+            if steps > 100_000 {
+                panic!("won't get in sync")
+            }
+        }
+        steps
     }
 }
 
 fn main() {
     if let Ok(cavern) = read_input("./resources/input-dec-11") {
         println!("Solution 1:");
-        let result = process_steps(cavern.clone(), 100);
+        let mut cavern: Grid<Octopus> = cavern;
+        let result = cavern.process_steps(100);
         println!("Total flashes: {}", result.flashes());
+        cavern.print();
+    }
 
-        println!("Solution 2:");
-        let result = process_steps(cavern, 1000);
-        println!("Total flashes: {}", result.flashes());
-        if let Some(sync_moment) = result.step_in_sync() {
-            println!("Step {} all are pulsing at same time.", sync_moment);
+    if let Ok(cavern) = read_input("./resources/input-dec-11") {
+        println!("\nSolution 2a:");
+        let mut cavern: Grid<Octopus> = cavern;
+        let result = cavern.process_steps(1000);
+        println!("Total flashes: {}", cavern.total_flashes());
+        if let Some(step) = result.step_in_sync() {
+            println!("Step {} all are pulsing at same time.", step);
         }
+    }
+
+    if let Ok(cavern) = read_input("./resources/input-dec-11") {
+        println!("\nSolution 2b:");
+        let mut cavern: Grid<Octopus> = cavern;
+        let in_sync_step = cavern.steps_to_get_in_sync();
+        println!("Total flashes: {}", cavern.total_flashes());
+        println!("Step {} all are pulsing at same time.", in_sync_step);
     }
 }
 
@@ -192,7 +236,7 @@ where
             map.push(
                 line.trim()
                     .chars()
-                    .map(|c| Octopus::new(c.to_digit(10).unwrap() as u64))
+                    .map(|c| Octopus::new(c.to_digit(10).unwrap() as u32))
                     .collect(),
             )
         }
@@ -205,12 +249,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{process_steps, read_input};
+    use crate::{read_input, OctopusGrid};
 
     #[test]
     fn solution_1() {
-        if let Ok(cavern) = read_input("../../resources/test-input-dec-11") {
-            let result = process_steps(cavern, 100);
+        if let Ok(mut cavern) = read_input("../../resources/test-input-dec-11") {
+            let result = cavern.process_steps(100);
 
             assert_eq!(result.flashes(), 1656);
         } else {
@@ -219,10 +263,20 @@ mod tests {
     }
 
     #[test]
-    fn solution_2() {
-        if let Ok(cavern) = read_input("../../resources/test-input-dec-11") {
-            let result = process_steps(cavern, 1000);
-            assert_eq!(result.step_in_sync(), Some(195));
+    fn solution_2a() {
+        if let Ok(mut cavern) = read_input("../../resources/test-input-dec-11") {
+            let result = cavern.process_steps(1000);
+            assert_eq!(result.step_in_sync().unwrap(), 195);
+        } else {
+            panic!("Fail!")
+        }
+    }
+
+    #[test]
+    fn solution_2b() {
+        if let Ok(mut cavern) = read_input("../../resources/test-input-dec-11") {
+            let result = cavern.steps_to_get_in_sync();
+            assert_eq!(result, 195);
         } else {
             panic!("Fail!")
         }
