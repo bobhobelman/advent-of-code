@@ -1,4 +1,4 @@
-use ansi_term::{Colour, Style};
+use anstyle::Style;
 use grid::*;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Thickness {
     number: i32,
 }
@@ -15,17 +15,29 @@ struct Thickness {
 impl Display for Thickness {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let number = match self.number {
-            0 => Style::new().fg(Colour::Blue).paint("#"),
-            1 => Style::new().fg(Colour::Green).bold().paint("#"),
-            _ => Style::new().fg(Colour::Red).bold().paint("#"),
+            0 => {
+                let blue_style = Style::new()
+                    .fg_color(Some(anstyle::AnsiColor::Blue.into()))
+                    .bold();
+                let blue_style = blue_style.render();
+                format!("{}#", blue_style)
+            }
+            1 => {
+                let green_style = Style::new()
+                    .fg_color(Some(anstyle::AnsiColor::Green.into()))
+                    .bold();
+                let green_style = green_style.render();
+                format!("{}#", green_style)
+            }
+            _ => {
+                let red_style = Style::new()
+                    .fg_color(Some(anstyle::AnsiColor::Red.into()))
+                    .bold();
+                let red_style = red_style.render();
+                format!("{}#", red_style)
+            }
         };
-        write!(f, "{} ", number)
-    }
-}
-
-impl Default for Thickness {
-    fn default() -> Self {
-        Self { number: 0 }
+        write!(f, "{}", number)
     }
 }
 

@@ -1,4 +1,4 @@
-use ansi_term::Style;
+use anstyle::Style;
 use grid::*;
 use io::BufReader;
 use std::fmt::{Display, Formatter};
@@ -16,7 +16,7 @@ enum Puzzle {
     Two,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Default, Clone, Copy, Debug)]
 struct Number {
     value: i32,
     marked: bool,
@@ -33,22 +33,23 @@ impl FromStr for Number {
     }
 }
 
-impl Default for Number {
-    fn default() -> Self {
-        Self {
-            value: 0,
-            marked: false,
-        }
-    }
-}
-
 impl Display for Number {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let number = match self.marked {
-            true => Style::new().bold().paint(format!("{:02}", self.value)),
-            false => Style::new().paint(format!("{:02}", self.value)),
+            false => {
+                let green_style = Style::new().fg_color(Some(anstyle::AnsiColor::Green.into()));
+                let green_style = green_style.render();
+                format!("{}{:02}", green_style, self.value)
+            }
+            true => {
+                let red_style = Style::new()
+                    .fg_color(Some(anstyle::AnsiColor::Red.into()))
+                    .bold();
+                let red_style = red_style.render();
+                format!("{}{:02}", red_style, self.value)
+            }
         };
-        write!(f, "{} ", number)
+        write!(f, "{}", number)
     }
 }
 

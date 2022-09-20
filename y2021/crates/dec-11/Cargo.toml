@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 grid = "0.6.0"
-ansi_term = "0.12.1"
 rand = "0.8.4"
+anstyle = "0.2.2"

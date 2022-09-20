@@ -1,4 +1,4 @@
-use ansi_term::{Colour, Style};
+use anstyle::Style;
 use grid::Grid;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
@@ -49,16 +49,22 @@ impl PartialEq for Location {
 impl Display for Location {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let number = match self.risk {
-            false => Style::new()
-                .fg(Colour::Green)
-                .bold()
-                .paint(format!("{}", self.height)),
-            true => Style::new()
-                .fg(Colour::Red)
-                .bold()
-                .paint(format!("{}", self.height)),
+            false => {
+                let green_style = Style::new()
+                    .fg_color(Some(anstyle::AnsiColor::Green.into()))
+                    .bold();
+                let green_style = green_style.render();
+                format!("{}{}", green_style, self.height)
+            }
+            true => {
+                let red_style = Style::new()
+                    .fg_color(Some(anstyle::AnsiColor::Red.into()))
+                    .bold();
+                let red_style = red_style.render();
+                format!("{}{}", red_style, self.height)
+            }
         };
-        write!(f, "{} ", number)
+        write!(f, "{}", number)
     }
 }
 

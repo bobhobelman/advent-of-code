@@ -1,4 +1,4 @@
-use ansi_term::{Colour, Style};
+use anstyle::Style;
 use grid::Grid;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
@@ -71,14 +71,20 @@ impl Octopus {
 impl Display for Octopus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let number = match self.energy {
-            0 => Style::new()
-                .fg(Colour::Yellow)
-                .bold()
-                .paint(format!("{}", self.energy)),
-            _ => Style::new()
-                .fg(Colour::Blue)
-                .bold()
-                .paint(format!("{}", self.energy)),
+            0 => {
+                let zero_style = Style::new()
+                    .fg_color(Some(anstyle::AnsiColor::Yellow.into()))
+                    .bold();
+                let zero_style = zero_style.render();
+                format!("{}{}", zero_style, self.energy)
+            }
+            _ => {
+                let none_style = Style::new()
+                    .fg_color(Some(anstyle::AnsiColor::Blue.into()))
+                    .bold();
+                let none_style = none_style.render();
+                format!("{}{}", none_style, self.energy)
+            }
         };
         write!(f, "{}", number)
     }
@@ -249,6 +255,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::OS;
     use crate::{read_input, OctopusGrid};
 
     #[test]
@@ -280,5 +287,10 @@ mod tests {
         } else {
             panic!("Fail!")
         }
+    }
+
+    #[test]
+    fn debian() {
+        assert_eq!(OS::DEBIAN.eq("KUT"), true);
     }
 }
