@@ -255,7 +255,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::OS;
     use crate::{read_input, OctopusGrid};
 
     #[test]
@@ -287,10 +286,5 @@ mod tests {
         } else {
             panic!("Fail!")
         }
-    }
-
-    #[test]
-    fn debian() {
-        assert_eq!(OS::DEBIAN.eq("KUT"), true);
     }
 }
